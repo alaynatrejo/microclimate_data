@@ -70,7 +70,7 @@ ggplot(micro_filter, aes(x = temp_c, y = factor(elevation), fill = stat(x))) +
   theme_ipsum() +
   theme(
     panel.spacing = unit(0.1, "lines"),
-    strip.text.x = element_text(size = 8)
+    strip.text.x = element_text(size = 8), axis.text.y = element_blank()
   )
 
 ##violin plot - credit: r graph gallery
@@ -81,14 +81,14 @@ micro_filter %>%
     theme_ipsum() +
     theme(
       legend.position = "none",
-      plot.title = element_text(size = 11)
+      plot.title = element_text(size = 11), axis.text.x = element_blank()
     ) +
     ggtitle("temperature variance by elevation bands") +
     xlab("elevation band") +
     ylab("temp")
 
 ##best visualization for me
-ggplot(micro_filter, aes(x = factor(elevation), y = temp_c, fill = factor(elevation))) + geom_boxplot() + theme_minimal() #must use factor for elevation (discrete x, continuous y)
+ggplot(micro_filter, aes(x = factor(elevation), y = temp_c, fill = factor(elevation))) + geom_boxplot() + theme_minimal() + theme(axis.text.x = element_blank()) #must use factor for elevation (discrete x, continuous y)
 
 ```
 
