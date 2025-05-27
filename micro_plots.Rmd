@@ -98,7 +98,7 @@ ggplot(micro_filter, aes(x = factor(elevation), y = temp_c, fill = factor(elevat
 model_elev_temp <- lm(temp_c ~ elevation, data = micro_filter)
 summary(model_elev_temp)
 
-##relationship btwn time and temperature
+##relationship btwn time and temperature - insightful (prev. said not, oops!)
 model_temp_time <- lm(temp_c ~ as.numeric(time_observation), data = micro_filter)
 summary(model)
 
