@@ -1,67 +1,89 @@
 ---
-title: "microclimate_data"
-author: "alayna"
-date: "2025-05-05"
-output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+# Exploring microclimate data  
 
+<I would add a description of what this R Script intends to achieve and do>
+
+## Install required libraries
 ```{r}
-
-#library 
 library(stringr)
 library(dplyr)
 library(ggridges)
 library(viridis)
+library(lubridate)
 library(hrbrthemes)
 library(ggplot2)
 library(lubridate)
 library(mgcv)
+library(ggplot2)
+library(ggridges)
+library(viridis)
 
-#read the file
-micro <- read.csv("/Users/alaynatrejo/downloads/merged_dt_final.csv")
-
-#View(micro)
+# read the file
+# I would rename the file so that it indicates what data it is
+microclimate <- read.csv("data/merged_dt_final.csv")
 ```
 
+<Write a description here of what that dataset contains?>
+<We may also need a script previously to indicate how you merged/cleaned microclimate data>
+
+## Cleaning the combined dataset on microclimate and bird detections  
+
+The above dataset contains both microclimate and time-stamped detections of birds associated with when a microclimate recording was logged. 
+
 ```{r}
+# convert text to lowercases
+names(microclimate) <- tolower(names(microclimate)) 
 
-names(micro) <- tolower(names(micro)) 
-#lowercases in columns^
+# verify if the column names are appropriate
+names(microclimate)
 
-#exclude rows with missing temp or time
-micro_clean <- micro[is.finite(micro$temp_c) & !is.na(micro$time_observation), ]
+# fix certain columns
+names(microclimate)[1] <- "temp_c"
+names(microclimate)[7] <- "true_positive"
 
-#filter for .7 only 
-micro_filter <- filter(micro_clean, confidence >=.7)
+# exclude rows with missing temp or time
+microclimate <- microclimate[is.finite(microclimate$temp_c) & !is.na(microclimate$time_observation), ]
 
-#View(micro_filter)
+# filter BirdNET detections > 0.7
+# something wrong here - I thought we were filtering detections separately for both species. Can we rewrite the code below to indicate that you are choosing a different confidence threshold for green and the greenish warbler. 
+
+microclimate <- microclimate %>%
+  filter(confidence >= 0.7)
+
+## veryify @Alayna or @Eliza if you are left with only ~6000 observations??
 
 #storing date and time ... ex.20240118_083000
-x <- c(micro_filter$time_observation)
+x <- c(microclimate$time_observation)
 #parse_date_time(x,"Ymd_HMS", tz = "GMT" ), H - mil. time
-micro_filter$time_observation <- parse_date_time(x,"Ymd_HMS", tz = "GMT" )
+microclimate$time_observation <- parse_date_time(x,"Ymd_HMS", tz = "GMT" )
 
 #I'll separate graphs and results by double hashtags '##'
 
 ##temp and time graphed  
-ggplot(micro_filter, aes(x = time_observation, y = temp_c, color = factor(elevation))) + 
+fig_temp_vs_time <- ggplot(microclimate, aes(x = time_observation, y = temp_c, color = factor(elevation))) + 
   geom_line() + theme_minimal() + labs(title = "Temperature through time")
 
 ##temp n time w/ facet
-ggplot(micro_filter, aes(x = time_observation, y = temp_c, color = factor(elevation))) + geom_smooth(method = "lm", se = FALSE) +
+# This is a cool plot - one idea is to potentially replot this with regression lines added to see if there is a linear increase over time. It appears that at lower elevations, the temperature is increasing between Feb to April, but at high elevations, there isn't a significant increase??
+
+
+ggplot(microclimate, aes(x = time_observation, y = temp_c, color = factor(elevation))) + geom_smooth(method = "lm", se = FALSE) +
   geom_line() + facet_wrap( ~ elevation) + theme_minimal() + 
   labs(title = "Temperature through time")
 ```
 
-
+## Annotate this section to indicate what the plots are 
 
 ```{r}
+## This plot is also very interesting - I wonder if it sparks any ideas on how much variation there is in microclimate at low vs. high elevations and if this variation is something that the green warbler can handle while the greenish cannot? Or is it simply resource dependent?
+
 ##claus o. wilke - credit: r graph gallery
-ggplot(micro_filter, aes(x = temp_c, y = factor(elevation), fill = stat(x))) +
+fig_temp_by_elevation <- 
+ggplot(microclimate, aes(x = temp_c, y = factor(elevation), fill = stat(x))) +
   geom_density_ridges_gradient(scale = 2, rel_min_height = 0.01) +
   scale_fill_viridis(name = "temp ", option = "C") +
   labs(title = "temperature distribution by elevation",
@@ -74,7 +96,7 @@ ggplot(micro_filter, aes(x = temp_c, y = factor(elevation), fill = stat(x))) +
   )
 
 ##violin plot - credit: r graph gallery
-micro_filter %>%
+fig_temp_variance <- microclimate %>%
   ggplot(aes(x = factor(elevation), y = temp_c, fill = factor(elevation))) +
     geom_violin(trim = FALSE) +
     scale_fill_viridis(discrete = TRUE, alpha = 0.6, option = "A") +
@@ -88,25 +110,32 @@ micro_filter %>%
     ylab("temp")
 
 ##best visualization for me
+## Can you reannotate this?? 
 ggplot(micro_filter, aes(x = factor(elevation), y = temp_c, fill = factor(elevation))) + geom_boxplot() + theme_minimal() + theme(axis.text.x = element_blank()) #must use factor for elevation (discrete x, continuous y)
 
 ```
 
+## Modeling temperature and elevation
+
 ```{r}
 
 ##relationship btwn elevation and temperature - insightful
-model_elev_temp <- lm(temp_c ~ elevation, data = micro_filter)
+model_elev_temp <- lm(temp_c ~ elevation, data = microclimate)
 summary(model_elev_temp)
 
 ##relationship btwn time and temperature - insightful (prev. said not, oops!)
-model_temp_time <- lm(temp_c ~ as.numeric(time_observation), data = micro_filter)
-summary(model)
+# I would think about the model formulation here. It may not make sense to convert time to numeric, since the numbers won't mean much - they are technically ~30-minute bins right? So a factor/categorical data might be more relevant. If my interpretation is right, you would expect the model to show an association between temperature and increasing time of day - hotter later in the day.
+# I would also ask you both a question of why you are plotting this data?
+
+model_temp_time <- lm(temp_c ~ as.numeric(time_observation), data = microclimate)
+summary(model_temp_time)
 
 ```
 
 
 ```{r}
 #work for the GREEN warbler 
+# I think we may need to set different confidence thresholds before we rerun the below section of code. Does that make sense?
 
 #green abundance 
 green_micro <- micro_filter %>%
